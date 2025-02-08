@@ -33,12 +33,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      # Cài đặt ffmpeg trên Linux và macOS sử dụng action của FedericoCarboni/setup-ffmpeg@v2
-      - name: Set up ffmpeg trên Linux/MacOS
-        if: matrix.os != 'windows-latest'
-        uses: FedericoCarboni/setup-ffmpeg@v2
+      # Cài đặt ffmpeg cho Ubuntu bằng apt-get
+      - name: Cài đặt ffmpeg trên Ubuntu
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      # Cài đặt ffmpeg trên Windows bằng Chocolatey
+      # Cài đặt ffmpeg cho macOS bằng Homebrew
+      - name: Cài đặt ffmpeg trên macOS
+        if: matrix.os == 'macos-latest'
+        run: brew install ffmpeg
+
+      # Cài đặt ffmpeg cho Windows bằng Chocolatey
       - name: Cài đặt ffmpeg trên Windows
         if: matrix.os == 'windows-latest'
         run: choco install ffmpeg --no-progress -y
