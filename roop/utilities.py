@@ -52,12 +52,29 @@ def create_video(target_path: str, fps: float = 30) -> bool:
     temp_output_path = get_temp_output_path(target_path)
     temp_directory_path = get_temp_directory_path(target_path)
     output_video_quality = (roop.globals.output_video_quality + 1) * 51 // 100
-    commands = ['-hwaccel', 'auto', '-r', str(fps), '-i', os.path.join(temp_directory_path, '%04d.' + roop.globals.temp_frame_format), '-c:v', roop.globals.output_video_encoder]
+    
+    # Kiểm tra xem có tồn tại các file đã được swap (có hậu tố _swapped) hay không
+    swapped_files = glob.glob(os.path.join(temp_directory_path, '*_swapped.' + roop.globals.temp_frame_format))
+    if swapped_files:
+        input_pattern = os.path.join(temp_directory_path, '%04d_swapped.' + roop.globals.temp_frame_format)
+        print(f"[UTILITIES] Sử dụng file đã swap với pattern: {input_pattern}")
+    else:
+        input_pattern = os.path.join(temp_directory_path, '%04d.' + roop.globals.temp_frame_format)
+        print(f"[UTILITIES] Sử dụng file gốc với pattern: {input_pattern}")
+    
+    commands = ['-hwaccel', 'auto', '-r', str(fps), '-i', input_pattern, '-c:v', roop.globals.output_video_encoder]
+    
     if roop.globals.output_video_encoder in ['libx264', 'libx265', 'libvpx']:
         commands.extend(['-crf', str(output_video_quality)])
     if roop.globals.output_video_encoder in ['h264_nvenc', 'hevc_nvenc']:
         commands.extend(['-cq', str(output_video_quality)])
-    commands.extend(['-pix_fmt', 'yuv420p', '-vf', 'colorspace=bt709:iall=bt601-6-625:fast=1', '-y', temp_output_path])
+    
+    commands.extend([
+        '-pix_fmt', 'yuv420p',
+        '-vf', 'colorspace=bt709:iall=bt601-6-625:fast=1',
+        '-y', temp_output_path
+    ])
+    
     return run_ffmpeg(commands)
 
 
@@ -70,7 +87,13 @@ def restore_audio(target_path: str, output_path: str) -> None:
 
 def get_temp_frame_paths(target_path: str) -> List[str]:
     temp_directory_path = get_temp_directory_path(target_path)
-    return glob.glob((os.path.join(glob.escape(temp_directory_path), '*.' + roop.globals.temp_frame_format)))
+    # Tìm các file có hậu tố _swapped, ví dụ: "0001_swapped.png"
+    swapped_paths = glob.glob(os.path.join(temp_directory_path, '*_swapped.' + roop.globals.temp_frame_format))
+    if swapped_paths:
+        return sorted(swapped_paths)
+    else:
+        # Nếu không có file nào có hậu tố _swapped, trả về tất cả các file theo định dạng
+        return sorted(glob.glob(os.path.join(temp_directory_path, '*.' + roop.globals.temp_frame_format)))
 
 
 def get_temp_directory_path(target_path: str) -> str:
