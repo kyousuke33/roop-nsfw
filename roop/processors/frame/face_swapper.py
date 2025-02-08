@@ -42,8 +42,8 @@ def clear_face_swapper() -> None:
 def pre_check() -> bool:
     # Cập nhật đường dẫn download để file được lưu trong thư mục models
     download_directory_path = resolve_relative_path("../models")
-    # Nếu link tải cũ không còn hoạt động, bạn cần thay link tải mới (hoặc yêu cầu người dùng tải thủ công).
-    new_model_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=64q9s0qg&dl=1"  # Ví dụ: link Dropbox direct download
+    # Nếu link tải cũ không còn hoạt động, hãy cập nhật link tải mới (hoặc yêu cầu người dùng tải thủ công)
+    new_model_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=64q9s0qg&dl=1"
     conditional_download(download_directory_path, [new_model_url])
     return True
 
@@ -87,13 +87,13 @@ def process_frames(source_path: str, temp_frame_paths: List[str], update: Callab
     """
     Hàm xử lý hàng loạt frame cho video.
     Nếu file đã được swap (tên chứa '_swapped') thì bỏ qua xử lý.
-    Các frame mới được lưu với hậu tố '_swapped' để phân biệt với file gốc.
-    Sau đó, danh sách temp_frame_paths được cập nhật chỉ chứa các file đã swap.
+    Các frame chưa được xử lý sẽ được swap và lưu vào file mới có hậu tố '_swapped'.
+    Cuối cùng, danh sách temp_frame_paths được cập nhật chỉ chứa các file đã swap.
     """
     source_face = get_one_face(cv2.imread(source_path))
     reference_face = None if roop.globals.many_faces else get_face_reference()
     total_frames = len(temp_frame_paths)
-    processed_paths = []  # Danh sách các file đã được xử lý
+    processed_paths: List[str] = []  # Danh sách các file đã được xử lý
     for i, temp_frame_path in enumerate(temp_frame_paths, start=1):
         basename = os.path.basename(temp_frame_path)
         # Nếu tên file đã chứa '_swapped', tức file đó đã được xử lý rồi → bỏ qua xử lý
@@ -102,8 +102,7 @@ def process_frames(source_path: str, temp_frame_paths: List[str], update: Callab
             processed_paths.append(temp_frame_path)
             continue
         # Nếu file chưa được xử lý, tiến hành xử lý
-        global_index = i  # hoặc bạn có thể dùng enumerate trực tiếp để in chỉ số
-        print(f"[FACE-SWAPPER] Đang xử lý frame {global_index}/{total_frames}: {temp_frame_path}", flush=True)
+        print(f"[FACE-SWAPPER] Đang xử lý frame {i}/{total_frames}: {temp_frame_path}", flush=True)
         temp_frame = cv2.imread(temp_frame_path)
         result = process_frame(source_face, reference_face, temp_frame)
         # Tạo tên file mới với hậu tố '_swapped'
