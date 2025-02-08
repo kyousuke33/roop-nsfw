@@ -21,7 +21,7 @@ jobs:
         run: flake8 run.py roop
 
       - name: Chạy mypy (type checking)
-        run: mypy run.py roop
+        run: mypy --install-types run.py roop
 
   test:
     strategy:
