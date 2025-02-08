@@ -9,17 +9,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Cài đặt các phụ thuộc
-        run: pip install -r requirements-headless.txt
-
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
           python-version: 3.9
 
+      - name: Cài đặt các phụ thuộc
+        run: pip install -r requirements.txt
+
       - name: Cài đặt flake8 và mypy
-        run: |
-          pip install flake8 mypy
+        run: pip install flake8 mypy
 
       - name: Chạy flake8 (lint)
         run: flake8 run.py roop
