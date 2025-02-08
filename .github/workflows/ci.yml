@@ -9,6 +9,9 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Cài đặt các phụ thuộc
+        run: pip install -r requirements-headless.txt
+
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
         with:
