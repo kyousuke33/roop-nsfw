@@ -3,6 +3,7 @@ import os
 import cv2
 import insightface
 import threading
+import requests
 
 import roop.globals
 import roop.processors.frame.core
@@ -39,12 +40,30 @@ def clear_face_swapper() -> None:
     FACE_SWAPPER = None
 
 
+def download_file(url: str, dest_path: str) -> None:
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+    with open(dest_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            if chunk:
+                f.write(chunk)
+
+
 def pre_check() -> bool:
-    # Cập nhật đường dẫn download để file được lưu trong thư mục models
-    download_directory_path = resolve_relative_path("../models")
-    # Nếu link tải cũ không còn hoạt động, hãy cập nhật link tải mới (hoặc yêu cầu người dùng tải thủ công)
-    new_model_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=64q9s0qg&dl=1"
-    conditional_download(download_directory_path, [new_model_url])
+    models_dir = resolve_relative_path("../models")
+    if not os.path.exists(models_dir):
+        os.makedirs(models_dir)
+    
+    model_path = os.path.join(models_dir, "inswapper_128.onnx")
+    if not os.path.exists(model_path):
+        print(f"File mô hình không tồn tại tại {model_path}. Đang tải từ Dropbox...")
+        dropbox_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=64q9s0qg&dl=1"
+        try:
+            download_file(dropbox_url, model_path)
+            print("Tải file mô hình thành công!")
+        except Exception as e:
+            print("Lỗi khi tải file mô hình:", e)
+            return False
     return True
 
 
