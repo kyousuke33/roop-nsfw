@@ -41,7 +41,6 @@ def clear_face_swapper() -> None:
 
 
 def download_file(url: str, dest_path: str) -> None:
-    import requests
     response = requests.get(url, stream=True)
     response.raise_for_status()
     total_size = int(response.headers.get('content-length', 0))
