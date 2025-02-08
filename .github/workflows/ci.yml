@@ -14,9 +14,6 @@ jobs:
         with:
           python-version: 3.9
 
-      - name: Cài đặt các phụ thuộc
-        run: pip install -r requirements.txt
-
       - name: Cài đặt flake8 và mypy
         run: pip install flake8 mypy
 
