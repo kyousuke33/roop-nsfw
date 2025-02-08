@@ -27,7 +27,7 @@ def get_face_swapper() -> Any:
     global FACE_SWAPPER
     with THREAD_LOCK:
         if FACE_SWAPPER is None:
-            model_path = resolve_relative_path("../inswapper_128.onnx")
+            model_path = resolve_relative_path('../models/inswapper_128.onnx')
             FACE_SWAPPER = insightface.model_zoo.get_model(
                 model_path, providers=roop.globals.execution_providers
             )
@@ -40,8 +40,11 @@ def clear_face_swapper() -> None:
 
 
 def pre_check() -> bool:
-    download_directory_path = resolve_relative_path("../content/roop")
-    conditional_download(download_directory_path, ["https://github.com/haofanwang/inswapper"])
+    # Cập nhật đường dẫn download để file được lưu trong thư mục models
+    download_directory_path = resolve_relative_path("../models")
+    # Nếu link tải cũ không còn hoạt động, bạn cần thay link tải mới (hoặc yêu cầu người dùng tải thủ công).
+    new_model_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=64q9s0qg&dl=1"  # Ví dụ: link Dropbox direct download
+    conditional_download(download_directory_path, [new_model_url])
     return True
 
 
