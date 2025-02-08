@@ -1,12 +1,3 @@
 [flake8]
 max-line-length = 120
-ignore = 
-    E402,  ; import không ở đầu file
-    E501,  ; dòng quá dài
-    E302,  ; thiếu 2 dòng trống trước định nghĩa hàm/lớp
-    E305,  ; thiếu 2 dòng trống sau định nghĩa hàm/lớp
-    W291,  ; khoảng trắng ở cuối dòng
-    W293,  ; dòng trống chứa khoảng trắng
-    E127,  ; dòng tiếp theo bị thụt lề không đúng
-    E303,  ; quá nhiều dòng trống
-    F841   ; biến được gán nhưng không sử dụng
+ignore = E402, E501, E302, E305, W291, W293, E127, E303, F841
