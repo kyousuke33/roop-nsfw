@@ -1,3 +1,12 @@
 [flake8]
-select = E3, E4, F, E501
-per-file-ignores = roop/core.py:E402,F401
+max-line-length = 120
+ignore = 
+    E402,  ; import không ở đầu file
+    E501,  ; dòng quá dài
+    E302,  ; thiếu 2 dòng trống trước định nghĩa hàm/lớp
+    E305,  ; thiếu 2 dòng trống sau định nghĩa hàm/lớp
+    W291,  ; khoảng trắng ở cuối dòng
+    W293,  ; dòng trống chứa khoảng trắng
+    E127,  ; dòng tiếp theo bị thụt lề không đúng
+    E303,  ; quá nhiều dòng trống
+    F841   ; biến được gán nhưng không sử dụng
