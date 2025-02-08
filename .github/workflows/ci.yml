@@ -1,0 +1,69 @@
+name: ci
+
+on:
+  push:
+    - '**'
+  pull_request:
+    - '**'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Cài đặt flake8 và mypy
+        run: |
+          pip install flake8 mypy
+
+      - name: Chạy flake8 (lint)
+        run: flake8 run.py roop
+
+      - name: Chạy mypy (type-checking)
+        run: mypy run.py roop
+
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up ffmpeg
+        uses: FedericoCarboni/setup-ffmpeg@v2
+
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+
+      - name: Cài đặt các yêu cầu cho headless
+        run: pip install -r requirements-headless.txt
+
+      - name: Chạy test (Roop) trên hệ thống không phải Windows
+        if: matrix.os != 'windows-latest'
+        run: |
+          python run.py -s .github/examples/source.jpg -t .github/examples/target.mp4 -o .github/examples/output.mp4
+
+      - name: Chạy test (Roop) trên Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          python run.py -s .github/examples/source.jpg -t .github/examples/target.mp4 -o .github/examples/output.mp4
+
+      - name: Kiểm tra đầu ra bằng ffmpeg trên hệ thống không phải Windows
+        if: matrix.os != 'windows-latest'
+        run: |
+          ffmpeg -i .github/examples/snapshot.mp4 -i .github/examples/output.mp4 -filter_complex psnr -f null -
+
+      - name: Kiểm tra đầu ra bằng ffmpeg trên Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          ffmpeg -i .github/examples/snapshot.mp4 -i .github/examples/output.mp4 -filter_complex psnr -f null -
