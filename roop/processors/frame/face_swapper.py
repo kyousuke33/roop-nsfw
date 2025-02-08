@@ -41,23 +41,28 @@ def clear_face_swapper() -> None:
 
 
 def download_file(url: str, dest_path: str) -> None:
+    import requests
     response = requests.get(url, stream=True)
     response.raise_for_status()
+    total_size = int(response.headers.get('content-length', 0))
     with open(dest_path, 'wb') as f:
         for chunk in response.iter_content(chunk_size=8192):
             if chunk:
                 f.write(chunk)
+    actual_size = os.path.getsize(dest_path)
+    if actual_size < total_size:
+        raise IOError(f"File tải xuống không đầy đủ: {actual_size} < {total_size}")
 
 
 def pre_check() -> bool:
     models_dir = resolve_relative_path("../models")
     if not os.path.exists(models_dir):
         os.makedirs(models_dir)
-    
     model_path = os.path.join(models_dir, "inswapper_128.onnx")
     if not os.path.exists(model_path):
         print(f"File mô hình không tồn tại tại {model_path}. Đang tải từ Dropbox...")
-        dropbox_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=64q9s0qg&dl=1"
+        # Sử dụng URL đã chuyển đổi
+        dropbox_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=han9rlrj&dl=1"
         try:
             download_file(dropbox_url, model_path)
             print("Tải file mô hình thành công!")
