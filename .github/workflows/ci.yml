@@ -21,7 +21,7 @@ jobs:
       - name: Chạy flake8 (lint)
         run: flake8 run.py roop
 
-      - name: Chạy mypy (type-checking)
+      - name: Chạy mypy (type checking)
         run: mypy run.py roop
 
   test:
@@ -33,8 +33,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
-      - name: Set up ffmpeg
+      # Cài đặt ffmpeg cho Linux và macOS
+      - name: Set up ffmpeg trên Linux/MacOS
+        if: matrix.os != 'windows-latest'
         uses: FedericoCarboni/setup-ffmpeg@v2
+
+      # Cài đặt ffmpeg cho Windows bằng Chocolatey
+      - name: Cài đặt ffmpeg trên Windows
+        if: matrix.os == 'windows-latest'
+        run: choco install ffmpeg --no-progress -y
 
       - name: Set up Python 3.9
         uses: actions/setup-python@v2
@@ -44,22 +51,20 @@ jobs:
       - name: Cài đặt các yêu cầu cho headless
         run: pip install -r requirements-headless.txt
 
-      - name: Chạy test (Roop) trên hệ thống không phải Windows
+      # Chạy test Roop
+      - name: Chạy test Roop trên hệ thống không phải Windows
         if: matrix.os != 'windows-latest'
-        run: |
-          python run.py -s .github/examples/source.jpg -t .github/examples/target.mp4 -o .github/examples/output.mp4
+        run: python run.py -s .github/examples/source.jpg -t .github/examples/target.mp4 -o .github/examples/output.mp4
 
-      - name: Chạy test (Roop) trên Windows
+      - name: Chạy test Roop trên Windows
         if: matrix.os == 'windows-latest'
-        run: |
-          python run.py -s .github/examples/source.jpg -t .github/examples/target.mp4 -o .github/examples/output.mp4
+        run: python run.py -s .github/examples/source.jpg -t .github/examples/target.mp4 -o .github/examples/output.mp4
 
+      # Kiểm tra đầu ra bằng ffmpeg
       - name: Kiểm tra đầu ra bằng ffmpeg trên hệ thống không phải Windows
         if: matrix.os != 'windows-latest'
-        run: |
-          ffmpeg -i .github/examples/snapshot.mp4 -i .github/examples/output.mp4 -filter_complex psnr -f null -
+        run: ffmpeg -i .github/examples/snapshot.mp4 -i .github/examples/output.mp4 -filter_complex psnr -f null -
 
       - name: Kiểm tra đầu ra bằng ffmpeg trên Windows
         if: matrix.os == 'windows-latest'
-        run: |
-          ffmpeg -i .github/examples/snapshot.mp4 -i .github/examples/output.mp4 -filter_complex psnr -f null -
+        run: ffmpeg -i .github/examples/snapshot.mp4 -i .github/examples/output.mp4 -filter_complex psnr -f null -
