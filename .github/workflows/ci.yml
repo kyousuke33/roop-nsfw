@@ -6,6 +6,9 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
+      - name: Cài đặt các phụ thuộc
+        run: pip install -r requirements.txt
+
       - name: Checkout code
         uses: actions/checkout@v2
 
