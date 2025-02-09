@@ -1,18 +1,18 @@
-import typing
-from typing import List, Callable, Any
+from typing import Any, List, Callable
 
 import os
 import glob
 import cv2
-import insightface
 import threading
-import requests
+
+# Import GFPGANer từ gfpgan.utils để tăng cường khuôn mặt
+from gfpgan.utils import GFPGANer
 
 import roop.globals
 import roop.processors.frame.core
 from roop.core import update_status
-from roop.face_analyser import get_many_faces, get_one_face, find_similar_face
-from roop.face_reference import get_face_reference, set_face_reference, clear_face_reference
+from roop.face_analyser import get_many_faces, get_one_face
+from roop.face_reference import get_face_reference, set_face_reference
 from roop.typing import Frame, Face
 from roop.utilities import (
     conditional_download,
@@ -45,7 +45,7 @@ def get_face_enhancer() -> Any:
 
 def get_device() -> str:
     """
-    Xác định thiết bị xử lý: nếu có GPU trả về 'cuda'; nếu CoreML/MPS trả về 'mps'; ngược lại 'cpu'.
+    Xác định thiết bị xử lý: nếu có GPU thì trả về 'cuda'; nếu có CoreML/MPS thì 'mps'; ngược lại trả về 'cpu'.
     """
     if 'CUDAExecutionProvider' in roop.globals.execution_providers:
         return 'cuda'
@@ -98,6 +98,7 @@ def enhance_face(target_face: Face, temp_frame: Frame) -> Frame:
     if temp_face.size:
         with THREAD_SEMAPHORE:
             try:
+                # GFPGANer trả về một tuple; chỉ lấy phần ảnh đã tăng cường
                 _, _, temp_face = get_face_enhancer().enhance(temp_face, paste_back=True)
             except Exception as e:
                 print(f"[FACE-ENHANCER] Lỗi khi tăng cường khuôn mặt: {e}", flush=True)
@@ -116,8 +117,8 @@ def process_frame(source_face: Face, reference_face: Face, temp_frame: Frame) ->
 
 def process_frames(source_path: str, temp_frame_paths: List[str], update: Callable[[], None]) -> None:
     """
-    Xử lý hàng loạt frame cho video.
-    Với mỗi frame, áp dụng tăng cường và ghi đè kết quả vào file.
+    Xử lý hàng loạt frame cho video:
+      - Với mỗi frame, áp dụng tăng cường và ghi đè kết quả vào file.
     """
     for temp_frame_path in temp_frame_paths:
         temp_frame = cv2.imread(temp_frame_path)
@@ -138,15 +139,22 @@ def process_image(source_path: str, target_path: str, output_path: str) -> None:
     result = process_frame(None, None, target_frame)
     cv2.imwrite(output_path, result)
 
-# --- Các hàm hỗ trợ cho xử lý video với tính năng resume ---
+# --- Các hàm hỗ trợ xử lý video với tính năng resume ---
 
 def get_total_video_frames(video_path: str) -> int:
+    """
+    Lấy tổng số frame của video sử dụng OpenCV.
+    """
     cap = cv2.VideoCapture(video_path)
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     cap.release()
     return total
 
 def get_temp_dir(video_path: str) -> str:
+    """
+    Xác định thư mục chứa các frame tạm dựa trên tên video.
+    Ví dụ: nếu video là 'video23.mp4' thì thư mục sẽ là ../video/temp/video23
+    """
     video_name, _ = os.path.splitext(os.path.basename(video_path))
     return resolve_relative_path(os.path.join("..", "video", "temp", video_name))
 
@@ -157,13 +165,13 @@ def resume_processing_video(source_path: str, video_path: str) -> None:
          Nếu thiếu, trích xuất bổ sung.
       2. Xác định resume index dựa trên các file đã được xử lý (có hậu tố '_swapped').
       3. Xử lý các file chưa được swap theo thứ tự tăng dần.
-      4. Khi tất cả các frame đã được swap, tạo video đầu ra.
+      4. Nếu tất cả các frame đã được swap, tạo video đầu ra.
     """
     temp_dir = get_temp_dir(video_path)
     ext = roop.globals.temp_frame_format or "png"
     total_frames = get_total_video_frames(video_path)
     
-    # Lấy danh sách file theo định dạng: tên bắt đầu bằng 4 chữ số (có thể có _swapped)
+    # Lấy danh sách file theo định dạng: tên bắt đầu bằng 4 chữ số (có thể có hoặc không có '_swapped')
     pattern = os.path.join(temp_dir, '[0-9][0-9][0-9][0-9]*.' + ext)
     all_files = sorted(glob.glob(pattern))
     
@@ -172,7 +180,7 @@ def resume_processing_video(source_path: str, video_path: str) -> None:
         extract_frames(video_path, fps=detect_fps(video_path))
         all_files = sorted(glob.glob(pattern))
     
-    # Xác định chỉ số các file đã được swap (có '_swapped')
+    # Xác định các chỉ số đã được swap (file có hậu tố '_swapped')
     processed_indices = set()
     for file in all_files:
         base = os.path.basename(file)
@@ -212,7 +220,7 @@ def resume_processing_video(source_path: str, video_path: str) -> None:
         for idx, file in files_to_process:
             print(f"[FACE-ENHANCER] Đang xử lý frame {idx}: {file}", flush=True)
             img = cv2.imread(file)
-            # Với face_enhancer, không cần xử lý khuôn mặt nguồn
+            # Với face_enhancer, không cần khuôn mặt nguồn
             source_face_img = None
             reference_face = None if roop.globals.many_faces else get_face_reference()
             try:
@@ -223,6 +231,7 @@ def resume_processing_video(source_path: str, video_path: str) -> None:
             new_filename = os.path.join(temp_dir, f"{idx:04d}_swapped.{ext}")
             cv2.imwrite(new_filename, result)
             print(f"[FACE-ENHANCER] Frame {file} đã được xử lý và lưu tại {new_filename}.", flush=True)
+        # Sau khi xử lý lô file hiện tại, gọi lại đệ quy để tiếp tục nếu còn file chưa swap
         resume_processing_video(source_path, video_path)
 
 def process_video(source_path: str, temp_frame_paths: List[str]) -> None:
@@ -230,7 +239,7 @@ def process_video(source_path: str, temp_frame_paths: List[str]) -> None:
     Thay vì xử lý video trực tiếp, gọi hàm resume_processing_video để đảm bảo:
       - Nếu còn frame chưa được trích xuất hoặc chưa được swap, sẽ xử lý bổ sung.
       - Khi tất cả các frame đã được swap, tạo video đầu ra.
-    Sau khi xử lý, cập nhật lại danh sách các frame đã được swap.
+    Sau đó, cập nhật lại danh sách các frame đã được swap vào temp_frame_paths.
     """
     if not roop.globals.many_faces and not get_face_reference():
         reference_frame = cv2.imread(temp_frame_paths[roop.globals.reference_frame_number])
