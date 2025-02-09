@@ -1,5 +1,5 @@
 import typing
-from typing import List
+from typing import List, Callable
 
 import os
 import glob
