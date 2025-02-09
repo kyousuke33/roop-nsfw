@@ -1,3 +1,4 @@
+from typing import Any, List, Callable
 import os
 import glob
 import cv2
@@ -114,66 +115,85 @@ def resume_processing_video(source_path: str, video_path: str) -> None:
     """
     Xử lý video theo yêu cầu:
       1. Đảm bảo số frame trong thư mục tạm đầy đủ so với video.
-      2. Nếu thiếu, trích xuất bổ sung.
-      3. Sau đó, xác định resume index từ các file đã có hậu tố _swapped,
-         và xử lý các file chưa được swap theo thứ tự tăng dần.
-      4. Khi không còn file chưa được swap, tạo video output.
+         Nếu thiếu, trích xuất bổ sung frame.
+      2. Xác định resume index dựa trên các file đã được xử lý (có hậu tố '_swapped').
+      3. Xử lý các file chưa được swap theo thứ tự tăng dần.
+      4. Nếu tất cả các frame đã được swap, tạo video output.
     """
     temp_dir = get_temp_dir(video_path)
     ext = roop.globals.temp_frame_format or "png"
     total_frames = get_total_video_frames(video_path)
-    # Lấy danh sách file hiện có trong thư mục tạm
-    all_files = sorted(glob.glob(os.path.join(temp_dir, f"*.{ext}")))
+    
+    # Lấy danh sách file từ thư mục tạm chỉ gồm các file có tên 4 chữ số (có thể có hoặc không có hậu tố _swapped)
+    pattern = os.path.join(temp_dir, '[0-9][0-9][0-9][0-9]*.' + ext)
+    all_files = sorted(glob.glob(pattern))
+    
+    # Nếu số file trong thư mục tạm nhỏ hơn tổng số frame, trích xuất bổ sung
     if len(all_files) < total_frames:
         print(f"Chưa đủ frame: {len(all_files)} < {total_frames}. Đang trích xuất bổ sung frame...")
         extract_frames(video_path, fps=detect_fps(video_path))
-        all_files = sorted(glob.glob(os.path.join(temp_dir, f"*.{ext}")))
+        all_files = sorted(glob.glob(pattern))
     
-    # Xác định danh sách các chỉ số đã được xử lý (có hậu tố _swapped)
+    # Xác định danh sách các chỉ số đã được xử lý (file có hậu tố '_swapped')
     processed_indices = set()
     for file in all_files:
         base = os.path.basename(file)
+        # Kiểm tra file có đúng định dạng 4 chữ số và có chứa '_swapped'
         if "_swapped" in base:
-            name = base.replace("_swapped", "")
+            # Loại bỏ hậu tố _swapped
+            base_clean = base.replace("_swapped", "")
             try:
-                idx = int(os.path.splitext(name)[0])
+                idx = int(os.path.splitext(base_clean)[0])
                 processed_indices.add(idx)
-            except:
+            except ValueError:
                 continue
-    # Resume index là số lớn nhất đã xử lý + 1, hoặc 0 nếu chưa có file nào được xử lý
+
+    # Resume index: nếu có file đã swap, resume_index = max(processed_indices) + 1, ngược lại = 0.
     resume_index = max(processed_indices) + 1 if processed_indices else 0
-    
-    # Xây dựng danh sách các file cần xử lý: các file không có _swapped và có chỉ số >= resume_index
+
+    # Xây dựng danh sách các file cần xử lý:
+    # Lấy các file có tên chính xác là 4 chữ số (không chứa '_swapped') và chỉ số >= resume_index.
     files_to_process = []
     for file in all_files:
         base = os.path.basename(file)
-        if "_swapped" not in base:
-            try:
-                idx = int(os.path.splitext(base)[0])
-                if idx >= resume_index:
-                    files_to_process.append((idx, file))
-            except:
-                continue
+        if "_swapped" in base:
+            continue
+        try:
+            idx = int(os.path.splitext(base)[0])
+            if idx >= resume_index:
+                files_to_process.append((idx, file))
+        except ValueError:
+            # Nếu file không theo định dạng, bỏ qua
+            continue
     files_to_process.sort(key=lambda x: x[0])
-    
+
     if not files_to_process:
         print("Tất cả các frame đã được xử lý. Đang tạo video output...")
-        create_video(video_path, detect_fps(video_path))
+        if create_video(video_path, detect_fps(video_path)):
+            print("Tạo video output thành công!")
+        else:
+            print("Tạo video output thất bại!")
         return
     else:
-        print(f"Tiếp tục xử lý các frame từ chỉ số {resume_index} đến {total_frames-1}.")
-        # Xử lý các frame chưa được swap theo thứ tự tăng dần
+        print(f"Tiếp tục xử lý các frame từ chỉ số {resume_index} đến {total_frames - 1}.")
+        # Xử lý các file chưa được swap theo thứ tự tăng dần
         for idx, file in files_to_process:
             print(f"[FACE-SWAPPER] Đang xử lý frame {idx}: {file}", flush=True)
             img = cv2.imread(file)
+            # Lấy khuôn mặt nguồn từ file source (có thể xử lý lại từng frame nếu cần)
             source_face_img = get_one_face(cv2.imread(source_path))
             reference_face = None if roop.globals.many_faces else get_face_reference()
-            result = process_frame(source_face_img, reference_face, img)
+            try:
+                result = process_frame(source_face_img, reference_face, img)
+            except Exception as e:
+                print(f"[FACE-SWAPPER] Lỗi khi xử lý frame {file}: {e}", flush=True)
+                continue
             new_filename = os.path.join(temp_dir, f"{idx:04d}_swapped.{ext}")
             cv2.imwrite(new_filename, result)
             print(f"[FACE-SWAPPER] Frame {file} đã được xử lý và lưu tại {new_filename}.", flush=True)
-        # Sau khi xử lý, làm mới danh sách và kiểm tra lại
+        # Sau khi xử lý xong, làm mới danh sách và kiểm tra lại
         resume_processing_video(source_path, video_path)
+
 
 def process_image(source_path: str, target_path: str, output_path: str) -> None:
     source_face = get_one_face(cv2.imread(source_path))
