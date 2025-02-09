@@ -59,11 +59,11 @@ def pre_check() -> bool:
         os.makedirs(models_dir)
     model_path = os.path.join(models_dir, "inswapper_128.onnx")
     if not os.path.exists(model_path):
-        print(f"File mô hình không tồn tại tại {model_path}. Đang tải từ Dropbox...")
+        print(f"File mô hình không tồn tại tại {model_path}. Đang tải lại file model...")
         # Sử dụng URL đã chuyển đổi
-        dropbox_url = "https://www.dropbox.com/scl/fi/qngqah0ni6dz58afhnpxq/inswapper_128.onnx?rlkey=t9bri158thcjgsiqwccqnhy4n&st=han9rlrj&dl=1"
+        model_url = "https://huggingface.co/TMElyralab/MuseV/resolve/9c911e064d6c3de4cf5a344a3c6a6981df8cd720/insightface/models/inswapper_128.onnx"
         try:
-            download_file(dropbox_url, model_path)
+            download_file(model_url, model_path)
             print("Tải file mô hình thành công!")
         except Exception as e:
             print("Lỗi khi tải file mô hình:", e)
