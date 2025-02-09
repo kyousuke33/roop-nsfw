@@ -1,0 +1,8 @@
+name: Block Cloning
+on: push
+jobs:
+  delete_clone:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Remove Notebook on Clone
+        run: rm -f GGColab_DeepFake_By_TaiNguyen.ipynb
