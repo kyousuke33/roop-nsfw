@@ -5,7 +5,6 @@ import glob
 import cv2
 import threading
 
-# Import GFPGANer từ gfpgan.utils để tăng cường khuôn mặt
 from gfpgan.utils import GFPGANer
 
 import roop.globals
@@ -24,11 +23,10 @@ from roop.utilities import (
     create_video
 )
 
-# Biến toàn cục cho model tăng cường khuôn mặt và các công cụ đồng bộ
 FACE_ENHANCER: Any = None
 THREAD_SEMAPHORE = threading.Semaphore()
 THREAD_LOCK = threading.Lock()
-NAME = "ROOP.FACE-ENHANCER"
+NAME = "face_enhancer"
 
 def get_face_enhancer() -> Any:
     """
