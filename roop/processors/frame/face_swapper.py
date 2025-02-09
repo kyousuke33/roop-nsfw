@@ -1,4 +1,6 @@
-from typing import Any, List, Callable
+import typing
+from typing import List
+
 import os
 import glob
 import cv2
@@ -26,7 +28,7 @@ FACE_SWAPPER = None
 THREAD_LOCK = threading.Lock()
 NAME = "ROOP.FACE-SWAPPER"
 
-def get_face_swapper() -> Any:
+def get_face_swapper() -> typing.Any:
     global FACE_SWAPPER
     with THREAD_LOCK:
         if FACE_SWAPPER is None:
