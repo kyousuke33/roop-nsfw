@@ -1,0 +1,17 @@
+name: dc
+on: pull_request
+jobs:
+  remove_ggcolab:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      - name: Remove GGColab folder
+        run: rm -rf GGColab/
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add .
+          git commit -m "Remove GGColab from PR"
+          git push origin main
