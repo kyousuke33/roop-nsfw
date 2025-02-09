@@ -2,6 +2,7 @@
 .idea
 models
 temp
+GGColab
 __pycache__/
 *.py[cod]
 *$py.class
