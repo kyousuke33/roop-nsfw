@@ -2,6 +2,8 @@
 🔥 **ROOP phiên bản tối ưu!** Không còn bộ lọc NSFW, hiệu suất tối đa, hoạt động trơn tru trên cả CPU & GPU!  
 
 ## 📌 Thông Tin Dự Án  
+
+[![Build Status](https://img.shields.io/github/actions/workflow/status/kyousuke33/roop-nsfw/ci.yml.svg?branch=main)](https://github.com/kyousuke33/roop-nsfw/actions?query=workflow:ci)
 - 🏷 **Phiên Bản:** ROOP Ultimate v1.3.4 – Tối ưu hóa tốc độ & cải thiện khả năng phát hiện khuôn mặt.  
 - 🤖 **Mô tả:** Roop là công cụ thay đổi khuôn mặt trong video & ảnh một cách dễ dàng. Chỉ cần một ảnh khuôn mặt!  
 - 📜 **Các Tính Năng Mới:**  
