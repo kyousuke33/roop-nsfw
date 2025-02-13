@@ -1,8 +1,66 @@
-| **Mục**                   | **Nội dung** |
-|---------------------------|--------------|
-| **Tiêu đề**               | Phiên bản ULTIMATE của ROOP, Không Bộ Lọc NSFW, Không Lỗi ;) <br> [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1l1eOnIrzzl06ir_ZOdO7Vmt3G2m-HDL4?usp=drive_link) |
-| **Giới thiệu**            | **Roop**: Biến một video thành video mới, thay thế khuôn mặt trong video bằng khuôn mặt bạn chọn. Bạn chỉ cần một ảnh của khuôn mặt mong muốn. <br>Không cần dataset, không cần đào tạo. |
-| **Build Status**          | [![Build Status](https://img.shields.io/github/actions/workflow/status/kyousuke33/roop-nsfw/ci.yml.svg?branch=main)](https://github.com/kyousuke33/roop-nsfw/actions?query=workflow:ci) |
-| **Cách sử dụng**          | **Chạy chương trình:**<br><br>```python run.py [OPTIONS]```<br><br>**Các tùy chọn chính:**<br>- **-h, --help**: Hiển thị trợ giúp và thoát.<br>- **-s SOURCE_PATH, --source SOURCE_PATH**: Chọn ảnh khuôn mặt (source).<br>- **-t TARGET_PATH, --target TARGET_PATH**: Chọn ảnh hoặc video đầu vào (target).<br>- **-o OUTPUT_PATH, --output OUTPUT_PATH**: Chọn file hoặc thư mục đầu ra.<br>- **--frame-processor FRAME_PROCESSOR [FRAME_PROCESSOR ...]**: Bộ xử lý frame (ví dụ: `face_swapper`, `face_enhancer`, …).<br>- **--keep-fps**: Giữ nguyên FPS của video đầu vào.<br>- **--keep-frames**: Lưu các frame tạm thời.<br>- **--skip-audio**: Bỏ qua âm thanh của video đầu vào.<br>- **--many-faces**: Xử lý tất cả các khuôn mặt.<br>- **--reference-face-position REFERENCE_FACE_POSITION**: Vị trí khuôn mặt tham chiếu.<br>- **--reference-frame-number REFERENCE_FRAME_NUMBER**: Số thứ tự của frame tham chiếu.<br>- **--similar-face-distance SIMILAR_FACE_DISTANCE**: Khoảng cách khuôn mặt dùng để nhận diện.<br>- **--temp-frame-format {jpg,png}**: Định dạng ảnh dùng để trích xuất frame.<br>- **--temp-frame-quality [0-100]**: Chất lượng ảnh dùng để trích xuất frame.<br>- **--output-video-encoder {libx264,libx265,libvpx-vp9,h264_nvenc,hevc_nvenc}**: Bộ mã hóa video đầu ra.<br>- **--output-video-quality [0-100]**: Chất lượng video đầu ra.<br>- **--max-memory MAX_MEMORY**: Giới hạn dung lượng RAM (GB).<br>- **--execution-provider {cpu} [{cpu} ...]**: Execution provider (ví dụ: `cpu`).<br>- **--execution-threads EXECUTION_THREADS**: Số luồng xử lý.<br>- **--resume-frame RESUME_FRAME**: Chỉ số frame bắt đầu xử lý (hỗ trợ resume).<br>- **-v, --version**: Hiển thị phiên bản chương trình và thoát.<br><br>**Chế độ Headless:** Khi sử dụng các tham số `-s/--source`, `-t/--target` và `-o/--output`, chương trình chạy ở chế độ headless (không có giao diện). |
-| **Các tính năng bổ sung**| - **Resume Face Swap:** Khi resume, hệ thống sẽ bỏ qua các frame đã được xử lý (các file có hậu tố `_swapped`) và tiếp tục xử lý từ frame mới nhất chưa được swap.<br>- **Tạo Video từ File Đã Swap:** Sau khi face swap xong, video được tạo ra chỉ sử dụng các file frame đã được xử lý (các file có hậu tố `_swapped`).<br>- **Logging Chi Tiết:** Hiển thị thông tin tiến trình xử lý từng frame theo thứ tự toàn cục. |
-| **Giấy Phép**           | Phần mềm sử dụng nhiều thư viện và các mô hình của bên thứ ba. Mỗi thành phần có giấy phép và điều khoản riêng, do đó giấy phép của dự án không áp dụng cho các thành phần đó. |
+# 🚀 Roop ULTIMATE - Face Swap Không Giới Hạn!  
+🔥 **ROOP phiên bản tối ưu!** Không còn bộ lọc NSFW, hiệu suất tối đa, hoạt động trơn tru trên cả CPU & GPU!  
+
+## 📌 Thông Tin Dự Án  
+- 🏷 **Phiên Bản:** ROOP Ultimate v1.3.4 – Tối ưu hóa tốc độ & cải thiện khả năng phát hiện khuôn mặt.  
+- 🤖 **Mô tả:** Roop là công cụ thay đổi khuôn mặt trong video & ảnh một cách dễ dàng. Chỉ cần một ảnh khuôn mặt!  
+- 📜 **Các Tính Năng Mới:**  
+  - 🚀 **Resume Progress** - Tiếp tục từ frame đã xử lý khi gặp sự cố.  
+  - 🎭 **Face Enhancer** - Cải thiện độ sắc nét cho khuôn mặt.  
+  - 🏆 **Multi-Face Detection** - Nhận diện nhiều khuôn mặt trên ảnh/video.  
+  - 🔍 **Logging Chi Tiết** - Hiển thị tiến trình từng frame!  
+  - 📖 **Hướng Dẫn:** Chạy ROOP trực tiếp với Google Colab hoặc trên máy cá nhân.  
+
+## 📥 Cài Đặt Nhanh Trên Google Colab  
+📌 **Sao chép & chạy lệnh sau:**  
+```bash
+git clone https://github.com/kyousuke33/roop-nsfw.git
+cd roop-nsfw
+pip install -r requirements.txt
+```
+📌 **Chạy ROOP từ Terminal / Command Line:**  
+```bash
+python run.py -s face.jpg -t input.mp4 -o output.mp4 --frame-processor face_swapper --keep-fps
+```
+
+## ⚙ Các Tùy Chọn Quan Trọng  
+| Tùy Chọn | Chức Năng |
+|----------|----------|
+| `-s, --source` | Chọn ảnh khuôn mặt để thay thế (JPG, PNG). |
+| `-t, --target` | Chọn ảnh hoặc video đầu vào. |
+| `-o, --output` | Chọn file hoặc thư mục đầu ra. |
+| `--keep-fps` | Giữ nguyên FPS của video đầu vào. |
+| `--keep-frames` | Lưu các frame tạm để debug. |
+| `--many-faces` | Xử lý tất cả khuôn mặt trong ảnh/video. |
+| `--resume-frame` | Tiếp tục từ frame đã xử lý trước đó nếu bị gián đoạn. |
+| `--output-video-encoder` | Bộ mã hóa video (libx264, libx265, h264_nvenc). |
+| `--execution-provider` | Chạy trên CPU hoặc CUDA (nếu có GPU). |
+| `--execution-threads` | Số luồng CPU/GPU sử dụng. |
+
+---
+
+## 🏆 Các Tính Năng Mới & Cải Tiến  
+✅ **Resume Face Swap**: Nếu bị gián đoạn, có thể tiếp tục từ frame đã swap.  
+🎭 **Face Enhancer**: Tăng cường chi tiết khuôn mặt, mịn màng & nét hơn so với ảnh/video gốc.  
+📊 **Tối ưu hiệu suất**: Giảm tải bộ nhớ RAM, cải thiện tốc độ xử lý.  
+📖 **Logging Chi Tiết**: Hiển thị thông tin tiến trình theo thời gian thực.  
+
+---
+
+## 📜 Giấy Phép & Điều Khoản  
+⚠ **Lưu ý:** Dự án này sử dụng nhiều thư viện và mô hình của bên thứ ba. Vui lòng kiểm tra giấy phép và tuân thủ các điều khoản sử dụng.  
+📜 **Giấy phép:** MIT License  
+
+---
+
+## 🌟 Liên Hệ & Góp Ý  
+📬 Nếu bạn có bất kỳ câu hỏi hoặc góp ý nào, hãy mở Issue hoặc tham gia cộng đồng của chúng tôi trên GitHub!  
+⭐ **Thích dự án này?** Đừng quên Star 🌟 trên GitHub để giúp dự án phát triển hơn!  
+
+---
+
+## 🔗 **Bắt Đầu Trải Nghiệm Ngay Trên Colab!**  
+[![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/)  
+📖 **[Hướng Dẫn Sử Dụng](https://github.com/kyousuke33/roop-nsfw/wiki/Wiki%E2%80%90Roop%E2%80%90Ultimate)**  
+
+Cùng trải nghiệm công nghệ AI mạnh mẽ nhất với **ROOP Ultimate** ngay hôm nay! 🚀
