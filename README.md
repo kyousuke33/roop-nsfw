@@ -62,7 +62,7 @@ python run.py -s face.jpg -t input.mp4 -o output.mp4 --frame-processor face_swap
 ---
 
 ## 🔗 **Bắt Đầu Trải Nghiệm Ngay Trên Colab!**  
-[![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/)  
+[![Google Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/drive/1l1eOnIrzzl06ir_ZOdO7Vmt3G2m-HDL4)  
 📖 **[Hướng Dẫn Sử Dụng](https://github.com/kyousuke33/roop-nsfw/wiki/Wiki%E2%80%90Roop%E2%80%90Ultimate)**  
 
 Cùng trải nghiệm công nghệ AI mạnh mẽ nhất với **ROOP Ultimate** ngay hôm nay! 🚀
