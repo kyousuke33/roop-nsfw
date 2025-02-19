@@ -12,10 +12,13 @@ from tqdm import tqdm
 
 import roop.globals
 
+import cv2
+import numpy as np
+
 TEMP_DIRECTORY = 'temp'
 TEMP_VIDEO_FILE = 'temp.mp4'
 
-# monkey patch ssl for mac
+# Monkey patch SSL cho macOS
 if platform.system().lower() == 'darwin':
     ssl._create_default_https_context = ssl._create_unverified_context
 
@@ -32,11 +35,26 @@ def run_ffmpeg(args: List[str]) -> bool:
 
 
 def detect_fps(target_path: str) -> float:
-    command = ['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries', 'stream=r_frame_rate', '-of', 'default=noprint_wrappers=1:nokey=1', target_path]
-    output = subprocess.check_output(command).decode().strip().split('/')
+    # Sử dụng avg_frame_rate để lấy FPS trung bình
+    command = [
+        'ffprobe', '-v', 'error', '-select_streams', 'v:0',
+        '-show_entries', 'stream=avg_frame_rate',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        target_path
+    ]
     try:
-        numerator, denominator = map(int, output)
-        return numerator / denominator
+        output = subprocess.check_output(command).decode().strip().split('/')
+        if len(output) == 2:
+            numerator, denominator = map(int, output)
+            if denominator == 0:
+                return 30
+            fps = numerator / denominator
+        else:
+            fps = 30
+        # Nếu FPS quá cao (ví dụ > 100), ta coi là lỗi và đặt lại 30 FPS
+        if fps > 100:
+            fps = 30
+        return fps
     except Exception:
         pass
     return 30
@@ -59,8 +77,8 @@ def create_video(target_path: str, fps: float = 30) -> bool:
     temp_output_path = get_temp_output_path(target_path)
     temp_directory_path = get_temp_directory_path(target_path)
     output_video_quality = (roop.globals.output_video_quality + 1) * 51 // 100
-    
-    # Kiểm tra xem có tồn tại các file đã được swap (có hậu tố _swapped) hay không
+
+    # Kiểm tra xem có tồn tại các file đã được swap (hậu tố _swapped) hay không
     swapped_files = glob.glob(os.path.join(temp_directory_path, '*_swapped.' + roop.globals.temp_frame_format))
     if swapped_files:
         input_pattern = os.path.join(temp_directory_path, '%04d_swapped.' + roop.globals.temp_frame_format)
@@ -68,20 +86,20 @@ def create_video(target_path: str, fps: float = 30) -> bool:
     else:
         input_pattern = os.path.join(temp_directory_path, '%04d.' + roop.globals.temp_frame_format)
         print(f"[UTILITIES] Sử dụng file gốc với pattern: {input_pattern}")
-    
+
     commands = ['-hwaccel', 'auto', '-r', str(fps), '-i', input_pattern, '-c:v', roop.globals.output_video_encoder]
-    
+
     if roop.globals.output_video_encoder in ['libx264', 'libx265', 'libvpx']:
         commands.extend(['-crf', str(output_video_quality)])
     if roop.globals.output_video_encoder in ['h264_nvenc', 'hevc_nvenc']:
         commands.extend(['-cq', str(output_video_quality)])
-    
+
     commands.extend([
         '-pix_fmt', 'yuv420p',
         '-vf', 'colorspace=bt709:iall=bt601-6-625:fast=1',
         '-y', temp_output_path
     ])
-    
+
     return run_ffmpeg(commands)
 
 
@@ -143,6 +161,42 @@ def clean_temp(target_path: str) -> None:
         shutil.rmtree(temp_directory_path)
     if os.path.exists(parent_directory_path) and not os.listdir(parent_directory_path):
         os.rmdir(parent_directory_path)
+
+
+def clean_temp_directory_if_needed(target_path: str) -> None:
+    """
+    Kiểm tra thư mục temp của video có hợp lệ hay không. Nếu số lượng frame vượt quá dự kiến hoặc
+    các frame đầu tiên giống nhau (có khả năng trích xuất lỗi), xóa thư mục để trích xuất lại.
+    """
+    temp_directory_path = get_temp_directory_path(target_path)
+    if not os.path.exists(temp_directory_path):
+        return
+
+    expected_frames = get_video_frame_total(target_path)
+    frame_pattern = os.path.join(temp_directory_path, '*.' + roop.globals.temp_frame_format)
+    extracted_frames = sorted(glob.glob(frame_pattern))
+    num_extracted = len(extracted_frames)
+
+    # Điều kiện 1: Số frame vượt quá 120% số dự kiến
+    if num_extracted > expected_frames * 1.2:
+        print(f"Đã phát hiện {num_extracted} frame, vượt quá dự kiến {expected_frames}. Xóa thư mục temp để trích xuất lại.")
+        shutil.rmtree(temp_directory_path)
+        os.makedirs(temp_directory_path, exist_ok=True)
+        return
+
+    # Điều kiện 2: Kiểm tra nếu 100 frame đầu tiên giống hệt nhau
+    duplicate = True
+    if extracted_frames:
+        first_frame = cv2.imread(extracted_frames[0])
+        for f in extracted_frames[1:min(101, num_extracted)]:
+            frame = cv2.imread(f)
+            if not np.array_equal(first_frame, frame):
+                duplicate = False
+                break
+    if duplicate and num_extracted > 1:
+        print("Các frame đầu tiên giống hệt nhau, có khả năng trích xuất bị lỗi. Xóa thư mục temp để trích xuất lại.")
+        shutil.rmtree(temp_directory_path)
+        os.makedirs(temp_directory_path, exist_ok=True)
 
 
 def has_image_extension(image_path: str) -> bool:
