@@ -63,16 +63,6 @@ def detect_fps(target_path: str) -> float:
     return 30
 
 
-def run_ffmpeg(args: List[str]) -> bool:
-    commands = ['ffmpeg', '-hide_banner', '-loglevel', roop.globals.log_level] + args
-    try:
-        output = subprocess.check_output(commands, stderr=subprocess.STDOUT)
-        return True
-    except subprocess.CalledProcessError as e:
-        print("Lỗi ffmpeg:", e.output.decode())
-        return False
-
-
 def extract_frames(target_path: str, fps: float = 30) -> bool:
     temp_directory_path = get_temp_directory_path(target_path)
     temp_frame_quality = roop.globals.temp_frame_quality * 31 // 100
