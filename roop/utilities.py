@@ -64,13 +64,23 @@ def extract_frames(target_path: str, fps: float = 30) -> bool:
     temp_directory_path = get_temp_directory_path(target_path)
     temp_frame_quality = roop.globals.temp_frame_quality * 31 // 100
     return run_ffmpeg([
-        '-start_number', '0',
         '-i', target_path,
+        '-start_number', '0',
         '-q:v', str(temp_frame_quality),
         '-pix_fmt', 'rgb24',
         '-vf', 'fps=' + str(fps),
         os.path.join(temp_directory_path, '%04d.' + roop.globals.temp_frame_format)
     ])
+
+
+def run_ffmpeg(args: List[str]) -> bool:
+    commands = ['ffmpeg', '-hide_banner', '-loglevel', roop.globals.log_level] + args
+    try:
+        output = subprocess.check_output(commands, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError as e:
+        print("Lỗi ffmpeg:", e.output.decode())
+        return False
 
 
 def create_video(target_path: str, fps: float = 30) -> bool:
