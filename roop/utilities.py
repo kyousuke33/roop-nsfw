@@ -11,6 +11,7 @@ from typing import List, Optional
 from tqdm import tqdm
 
 import roop.globals
+from roop.capturer import get_video_frame_total  # Thêm import này để sử dụng get_video_frame_total
 
 import cv2
 import numpy as np
@@ -29,8 +30,10 @@ def run_ffmpeg(args: List[str]) -> bool:
     try:
         subprocess.check_output(commands, stderr=subprocess.STDOUT)
         return True
-    except Exception:
-        pass
+    except subprocess.CalledProcessError as e:
+        print("Lỗi ffmpeg:", e.output.decode())
+    except Exception as e:
+        print("Lỗi chạy ffmpeg:", e)
     return False
 
 
@@ -51,13 +54,23 @@ def detect_fps(target_path: str) -> float:
             fps = numerator / denominator
         else:
             fps = 30
-        # Nếu FPS quá cao (ví dụ > 100), ta coi là lỗi và đặt lại 30 FPS
+        # Nếu FPS quá cao, đặt lại là 30
         if fps > 100:
             fps = 30
         return fps
     except Exception:
         pass
     return 30
+
+
+def run_ffmpeg(args: List[str]) -> bool:
+    commands = ['ffmpeg', '-hide_banner', '-loglevel', roop.globals.log_level] + args
+    try:
+        output = subprocess.check_output(commands, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError as e:
+        print("Lỗi ffmpeg:", e.output.decode())
+        return False
 
 
 def extract_frames(target_path: str, fps: float = 30) -> bool:
@@ -71,16 +84,6 @@ def extract_frames(target_path: str, fps: float = 30) -> bool:
         '-vf', 'fps=' + str(fps),
         os.path.join(temp_directory_path, '%04d.' + roop.globals.temp_frame_format)
     ])
-
-
-def run_ffmpeg(args: List[str]) -> bool:
-    commands = ['ffmpeg', '-hide_banner', '-loglevel', roop.globals.log_level] + args
-    try:
-        output = subprocess.check_output(commands, stderr=subprocess.STDOUT)
-        return True
-    except subprocess.CalledProcessError as e:
-        print("Lỗi ffmpeg:", e.output.decode())
-        return False
 
 
 def create_video(target_path: str, fps: float = 30) -> bool:
@@ -115,7 +118,14 @@ def create_video(target_path: str, fps: float = 30) -> bool:
 
 def restore_audio(target_path: str, output_path: str) -> None:
     temp_output_path = get_temp_output_path(target_path)
-    done = run_ffmpeg(['-i', temp_output_path, '-i', target_path, '-c:v', 'copy', '-map', '0:v:0', '-map', '1:a:0', '-y', output_path])
+    done = run_ffmpeg([
+        '-i', temp_output_path,
+        '-i', target_path,
+        '-c:v', 'copy',
+        '-map', '0:v:0',
+        '-map', '1:a:0',
+        '-y', output_path
+    ])
     if not done:
         move_temp(target_path, output_path)
 
@@ -175,8 +185,9 @@ def clean_temp(target_path: str) -> None:
 
 def clean_temp_directory_if_needed(target_path: str) -> None:
     """
-    Kiểm tra thư mục temp của video có hợp lệ hay không. Nếu số lượng frame vượt quá dự kiến hoặc
-    các frame đầu tiên giống nhau (có khả năng trích xuất lỗi), xóa thư mục để trích xuất lại.
+    Kiểm tra thư mục temp của video có hợp lệ hay không.
+    Nếu số lượng frame vượt quá 120% số dự kiến hoặc các frame đầu tiên giống nhau,
+    xóa thư mục để trích xuất lại.
     """
     temp_directory_path = get_temp_directory_path(target_path)
     if not os.path.exists(temp_directory_path):
