@@ -25,7 +25,7 @@ def clear_face_analyser() -> Any:
 
 def select_face_index(faces: List[Face]) -> int:
     if len(faces) == 1:
-        return 0
+        return 0  # Nếu chỉ có một khuôn mặt, chọn luôn
     
     output = widgets.Output()
     dropdown = widgets.Dropdown(
@@ -42,7 +42,7 @@ def select_face_index(faces: List[Face]) -> int:
         clear_output(wait=True)
 
     def on_cancel_clicked(_):
-        selected_index[0] = 0
+        selected_index[0] = 0  # Mặc định chọn khuôn mặt đầu tiên nếu hủy
         clear_output(wait=True)
         print("⏳ Không chọn, tự động lấy khuôn mặt đầu tiên.")
 
@@ -78,3 +78,13 @@ def get_many_faces(frame: Frame) -> Optional[List[Face]]:
         return faces
     except ValueError:
         return None
+
+def find_similar_face(frame: Frame, reference_face: Face) -> Optional[Face]:
+    many_faces = get_many_faces(frame)
+    if many_faces:
+        for face in many_faces:
+            if hasattr(face, 'normed_embedding') and hasattr(reference_face, 'normed_embedding'):
+                distance = numpy.sum(numpy.square(face.normed_embedding - reference_face.normed_embedding))
+                if distance < roop.globals.similar_face_distance:
+                    return face
+    return None
