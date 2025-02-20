@@ -65,10 +65,13 @@ def select_face_index(faces: List[Face]) -> int:
 
     return selected_index[0]
 
-def get_one_face(frame: Frame) -> Optional[Face]:
+def get_one_face(frame: Frame, position: Optional[int] = 0) -> Optional[Face]:
     many_faces = get_many_faces(frame)
     if many_faces:
-        index = select_face_index(many_faces)
+        if position is None:
+            index = select_face_index(many_faces)
+        else:
+            index = min(position, len(many_faces) - 1)  # Đảm bảo không vượt quá index hợp lệ
         return many_faces[index]
     return None
 
@@ -79,14 +82,18 @@ def get_many_faces(frame: Frame) -> Optional[List[Face]]:
     except ValueError:
         return None
 
-def find_similar_face(frame: Frame, reference_face: Optional[Face]) -> Optional[Face]:
+def find_similar_face(frame: Frame, reference_face: Face) -> Optional[Face]:
     if reference_face is None:
         return None
     many_faces = get_many_faces(frame)
     if many_faces:
+        min_distance = float('inf')
+        best_match = None
         for face in many_faces:
             if hasattr(face, 'normed_embedding') and hasattr(reference_face, 'normed_embedding'):
-                distance = numpy.sum(numpy.square(face.normed_embedding - reference_face.normed_embedding))
-                if distance < roop.globals.similar_face_distance:
-                    return face
+                distance = numpy.linalg.norm(face.normed_embedding - reference_face.normed_embedding)
+                if distance < min_distance and distance < roop.globals.similar_face_distance:
+                    min_distance = distance
+                    best_match = face
+        return best_match
     return None
