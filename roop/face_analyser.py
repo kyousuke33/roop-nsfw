@@ -79,7 +79,9 @@ def get_many_faces(frame: Frame) -> Optional[List[Face]]:
     except ValueError:
         return None
 
-def find_similar_face(frame: Frame, reference_face: Face) -> Optional[Face]:
+def find_similar_face(frame: Frame, reference_face: Optional[Face]) -> Optional[Face]:
+    if reference_face is None:
+        return None
     many_faces = get_many_faces(frame)
     if many_faces:
         for face in many_faces:
