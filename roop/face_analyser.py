@@ -1,99 +1,49 @@
-import threading
-import time
-from typing import Any, Optional, List
+import os
+import cv2
+import numpy as np
 import insightface
-import numpy
-import ipywidgets as widgets
-from IPython.display import display, clear_output
-import roop.globals
-from roop.typing import Frame, Face
+import threading
+import sys
 
-FACE_ANALYSER = None
+from roop.face_analyser import get_many_faces
+from roop.utilities import resolve_relative_path
+
 THREAD_LOCK = threading.Lock()
+FACE_SWAPPER = None
+AVAILABLE_MODELS = {"inswapper": "inswapper_128.onnx", "simswap": "simswap.onnx", "faceshifter": "faceshifter.onnx"}
+SELECTED_MODEL = os.getenv("FACE_SWAP_MODEL", "inswapper")  # Cho phép chọn model thông qua biến môi trường
 
-def get_face_analyser() -> Any:
-    global FACE_ANALYSER
+def get_face_swapper():
+    global FACE_SWAPPER, SELECTED_MODEL
     with THREAD_LOCK:
-        if FACE_ANALYSER is None:
-            FACE_ANALYSER = insightface.app.FaceAnalysis(name='buffalo_l', providers=roop.globals.execution_providers)
-            FACE_ANALYSER.prepare(ctx_id=0)
-    return FACE_ANALYSER
+        if FACE_SWAPPER is None:
+            model_path = resolve_relative_path(f'../models/{AVAILABLE_MODELS.get(SELECTED_MODEL, "inswapper_128.onnx")}')
+            FACE_SWAPPER = insightface.model_zoo.get_model(model_path)
+    return FACE_SWAPPER
 
-def clear_face_analyser() -> Any:
-    global FACE_ANALYSER
-    FACE_ANALYSER = None
+def swap_face(source_face, target_face, frame):
+    return get_face_swapper().get(frame, target_face, source_face, paste_back=True)
 
-def select_face_index(faces: List[Face]) -> int:
-    if len(faces) == 1:
-        return 0  # Nếu chỉ có một khuôn mặt, chọn luôn
-    
-    output = widgets.Output()
-    dropdown = widgets.Dropdown(
-        options=[(f"Khuôn mặt {i}", i) for i in range(len(faces))],
-        description="Chọn mặt:",
-        style={'description_width': 'initial'}
-    )
-    button_ok = widgets.Button(description="OK", button_style='success')
-    button_cancel = widgets.Button(description="Hủy", button_style='danger')
-    selected_index = [None]
+def is_blurry(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
+    return laplacian_var < 100  # Ngưỡng để xác định ảnh mờ
 
-    def on_ok_clicked(_):
-        selected_index[0] = dropdown.value
-        clear_output(wait=True)
-
-    def on_cancel_clicked(_):
-        selected_index[0] = 0  # Mặc định chọn khuôn mặt đầu tiên nếu hủy
-        clear_output(wait=True)
-        print("⏳ Không chọn, tự động lấy khuôn mặt đầu tiên.")
-
-    button_ok.on_click(on_ok_clicked)
-    button_cancel.on_click(on_cancel_clicked)
-
-    display(dropdown, button_ok, button_cancel, output)
-
-    def auto_select():
-        time.sleep(5)
-        if selected_index[0] is None:
-            selected_index[0] = 0
-            clear_output(wait=True)
-            print("⏳ Hết thời gian, tự động chọn khuôn mặt đầu tiên.")
-    
-    threading.Thread(target=auto_select, daemon=True).start()
-
-    while selected_index[0] is None:
-        time.sleep(0.1)
-
-    return selected_index[0]
-
-def get_one_face(frame: Frame, position: Optional[int] = 0) -> Optional[Face]:
-    many_faces = get_many_faces(frame)
-    if many_faces:
-        if position is None:
-            index = select_face_index(many_faces)
-        else:
-            index = min(position, len(many_faces) - 1)  # Đảm bảo không vượt quá index hợp lệ
-        return many_faces[index]
-    return None
-
-def get_many_faces(frame: Frame) -> Optional[List[Face]]:
-    try:
-        faces = get_face_analyser().get(frame)
-        return faces
-    except ValueError:
-        return None
-
-def find_similar_face(frame: Frame, reference_face: Face) -> Optional[Face]:
-    if reference_face is None:
-        return None
-    many_faces = get_many_faces(frame)
-    if many_faces:
-        min_distance = float('inf')
-        best_match = None
-        for face in many_faces:
-            if hasattr(face, 'normed_embedding') and hasattr(reference_face, 'normed_embedding'):
-                distance = numpy.linalg.norm(face.normed_embedding - reference_face.normed_embedding)
-                if distance < min_distance and distance < roop.globals.similar_face_distance:
-                    min_distance = distance
-                    best_match = face
-        return best_match
-    return None
+def process_frame(source_face, reference_face, frame):
+    faces = get_many_faces(frame)
+    if faces:
+        best_face = None
+        highest_clarity = 0
+        
+        for face in faces:
+            x1, y1, x2, y2 = map(int, face['bbox'])
+            face_img = frame[y1:y2, x1:x2]
+            if not is_blurry(face_img):
+                clarity = cv2.Laplacian(face_img, cv2.CV_64F).var()
+                if clarity > highest_clarity:
+                    highest_clarity = clarity
+                    best_face = face
+        
+        if best_face:
+            return swap_face(source_face, best_face, frame)
+    return frame
