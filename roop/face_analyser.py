@@ -1,47 +1,54 @@
-import os
-import cv2
-import insightface
 import threading
+from typing import Any, Optional, List
+import insightface
+import numpy
 
-from roop.face_analyser import get_many_faces
-from roop.utilities import resolve_relative_path
+import roop.globals
+from roop.typing import Frame, Face
 
+FACE_ANALYSER = None
 THREAD_LOCK = threading.Lock()
-FACE_SWAPPER = None
-AVAILABLE_MODELS = {"inswapper": "inswapper_128.onnx", "simswap": "simswap.onnx", "faceshifter": "faceshifter.onnx"}
-SELECTED_MODEL = os.getenv("FACE_SWAP_MODEL", "inswapper")  # Cho phép chọn model thông qua biến môi trường
 
-def get_face_swapper():
-    global FACE_SWAPPER, SELECTED_MODEL
+
+def get_face_analyser() -> Any:
+    global FACE_ANALYSER
+
     with THREAD_LOCK:
-        if FACE_SWAPPER is None:
-            model_path = resolve_relative_path(f'../models/{AVAILABLE_MODELS.get(SELECTED_MODEL, "inswapper_128.onnx")}')
-            FACE_SWAPPER = insightface.model_zoo.get_model(model_path)
-    return FACE_SWAPPER
+        if FACE_ANALYSER is None:
+            FACE_ANALYSER = insightface.app.FaceAnalysis(name='buffalo_l', providers=roop.globals.execution_providers)
+            FACE_ANALYSER.prepare(ctx_id=0)
+    return FACE_ANALYSER
 
-def swap_face(source_face, target_face, frame):
-    return get_face_swapper().get(frame, target_face, source_face, paste_back=True)
 
-def is_blurry(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    laplacian_var = cv2.Laplacian(gray, cv2.CV_64F).var()
-    return laplacian_var < 100  # Ngưỡng để xác định ảnh mờ
+def clear_face_analyser() -> Any:
+    global FACE_ANALYSER
 
-def process_frame(source_face, reference_face, frame):
-    faces = get_many_faces(frame)
-    if faces:
-        best_face = None
-        highest_clarity = 0
-        
-        for face in faces:
-            x1, y1, x2, y2 = map(int, face['bbox'])
-            face_img = frame[y1:y2, x1:x2]
-            if not is_blurry(face_img):
-                clarity = cv2.Laplacian(face_img, cv2.CV_64F).var()
-                if clarity > highest_clarity:
-                    highest_clarity = clarity
-                    best_face = face
-        
-        if best_face:
-            return swap_face(source_face, best_face, frame)
-    return frame
+    FACE_ANALYSER = None
+
+
+def get_one_face(frame: Frame, position: int = 0) -> Optional[Face]:
+    many_faces = get_many_faces(frame)
+    if many_faces:
+        try:
+            return many_faces[position]
+        except IndexError:
+            return many_faces[-1]
+    return None
+
+
+def get_many_faces(frame: Frame) -> Optional[List[Face]]:
+    try:
+        return get_face_analyser().get(frame)
+    except ValueError:
+        return None
+
+
+def find_similar_face(frame: Frame, reference_face: Face) -> Optional[Face]:
+    many_faces = get_many_faces(frame)
+    if many_faces:
+        for face in many_faces:
+            if hasattr(face, 'normed_embedding') and hasattr(reference_face, 'normed_embedding'):
+                distance = numpy.sum(numpy.square(face.normed_embedding - reference_face.normed_embedding))
+                if distance < roop.globals.similar_face_distance:
+                    return face
+    return None
