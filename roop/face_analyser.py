@@ -1,9 +1,7 @@
 import os
 import cv2
-import numpy as np
 import insightface
 import threading
-import sys
 
 from roop.face_analyser import get_many_faces
 from roop.utilities import resolve_relative_path
